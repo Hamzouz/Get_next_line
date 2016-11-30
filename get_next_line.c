@@ -6,7 +6,7 @@
 /*   By: hmadad <marvin@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2016/11/29 09:59:31 by hmadad            #+#    #+#             */
-/*   Updated: 2016/11/29 17:18:59 by hmadad           ###   ########.fr       */
+/*   Updated: 2016/11/30 17:14:50 by hmadad           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,46 +19,59 @@ void	ft_errors(int n)
 	return ;
 }
 
-int		check_buf(char *buf, char **line, char *all)
+int		check_buf(char *buf, char **line)
 {
 	char		*tmp;
 	int			i;
+	static char	*all = NULL;
+	static char *reste = NULL;
 
 	i = 0;
+	if (reste)
+	{
+		all = reste;
+		reste = NULL;
+	}
 	while (buf[i])
 	{
 		if (buf[i] == '\n')
 		{
-			ft_putstr("ICII\n");
-			tmp = ft_strsub(buf, 0, (i + 1));
-			ft_putstr(ft_strjoin(all, tmp));
-			all = ft_strjoin(all, tmp);
-			line = &all;
-			ft_putstr("Je suis la\n");
-			ft_putstr(all);
+			if (!all)
+				all = ft_strsub(buf, 0, i);
+			else
+			{
+				reste = ft_strsub(buf, i, (ft_strlen(buf) - i));
+				all = ft_strjoin(all, ft_strsub(buf, 0, i));
+			}
+			*line = all;
 			return (1);
 		}
 		i++;
 	}
 	if (buf[i] == '\0')
-		all = ft_free_join(all, buf, 'L');
+	{
+		if (!all)
+			all = ft_strdup(buf);
+		else
+			all = ft_strjoin(all, buf);
+	}
 	return (0);
 }
 
 int		get_next_line(const int fd, char **line)
 {
 	char	buf[BUFF_SIZE];
-	static char	*all = NULL;
 
-	all = ft_memalloc(1);
 	if (read(fd, &buf, 0) >= 0)
 	{
 		while (read(fd, &buf, BUFF_SIZE - 1) != 0)
 		{
 			buf[BUFF_SIZE - 1] = '\0';
-			if (check_buf(buf, line, all) == 1)
+			if (check_buf(buf, line) == 1)
 				return(1);
+			ft_bzero(buf, ft_strlen(buf));
 		}
+		*line = buf;
 	}
 	else
 		ft_errors(-1);
