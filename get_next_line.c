@@ -6,74 +6,60 @@
 /*   By: hmadad <marvin@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2016/11/29 09:59:31 by hmadad            #+#    #+#             */
-/*   Updated: 2016/11/30 17:14:50 by hmadad           ###   ########.fr       */
+/*   Updated: 2016/12/04 16:07:38 by hmadad           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 
-void	ft_errors(int n)
+void	buf_all(char *buf, char **all)
 {
-	if (n == -1)
-		ft_putstr("le Dossier ne peux pas etre lu");
-	return ;
+	if (!(*all))
+		*all = ft_strdup(buf);
+	else
+		*all = ft_free_join(*all, buf, 'L');
 }
 
-int		check_buf(char *buf, char **line)
+int		check_buf(char **line, char **all)
 {
-	char		*tmp;
-	int			i;
-	static char	*all = NULL;
-	static char *reste = NULL;
+	int		i;
 
 	i = 0;
-	if (reste)
+	if (*all)
 	{
-		all = reste;
-		reste = NULL;
-	}
-	while (buf[i])
-	{
-		if (buf[i] == '\n')
+		while ((*all)[i])
 		{
-			if (!all)
-				all = ft_strsub(buf, 0, i);
-			else
+			if ((*all)[i] == '\n')
 			{
-				reste = ft_strsub(buf, i, (ft_strlen(buf) - i));
-				all = ft_strjoin(all, ft_strsub(buf, 0, i));
+				*line = ft_strsub(*all, 0, i);
+				*all = ft_strsub(*all, i + 1, ft_strlen(*all) - i);
+				return (1);
 			}
-			*line = all;
-			return (1);
+			i++;
 		}
-		i++;
+		*line = *all;
+		*all = ft_strsub(*all, i + 1, ft_strlen(*all) - i);
 	}
-	if (buf[i] == '\0')
-	{
-		if (!all)
-			all = ft_strdup(buf);
-		else
-			all = ft_strjoin(all, buf);
-	}
-	return (0);
+	return (1);
 }
 
 int		get_next_line(const int fd, char **line)
 {
-	char	buf[BUFF_SIZE];
+	char		buf[BUFF_SIZE + 1];
+	static char	*all = NULL;
+	int			nb;
 
 	if (read(fd, &buf, 0) >= 0)
 	{
-		while (read(fd, &buf, BUFF_SIZE - 1) != 0)
+		while ((nb = read(fd, &buf, BUFF_SIZE)) > 0)
 		{
-			buf[BUFF_SIZE - 1] = '\0';
-			if (check_buf(buf, line) == 1)
-				return(1);
-			ft_bzero(buf, ft_strlen(buf));
+			buf[nb] = '\0';
+			buf_all(buf, &all);
+			ft_bzero(buf, BUFF_SIZE);
 		}
-		*line = buf;
+		while (ft_strcmp(all, "") != 0 && check_buf(line, &all) == 1)
+			return (1);
+		return (0);
 	}
-	else
-		ft_errors(-1);
-	return (0);
+	return (-1);
 }
