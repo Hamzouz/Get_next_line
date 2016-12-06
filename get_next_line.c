@@ -6,41 +6,30 @@
 /*   By: hmadad <marvin@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2016/11/29 09:59:31 by hmadad            #+#    #+#             */
-/*   Updated: 2016/12/04 16:07:38 by hmadad           ###   ########.fr       */
+/*   Updated: 2016/12/06 14:07:35 by hmadad           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
+#include <stdio.h>
 
-void	buf_all(char *buf, char **all)
+int		check_buf(char* buf, char **all, char **line)
 {
-	if (!(*all))
-		*all = ft_strdup(buf);
-	else
-		*all = ft_free_join(*all, buf, 'L');
-}
+	char	*tmp;
 
-int		check_buf(char **line, char **all)
-{
-	int		i;
-
-	i = 0;
-	if (*all)
+	if ((tmp = ft_strchr(*all, '\n')))
 	{
-		while ((*all)[i])
-		{
-			if ((*all)[i] == '\n')
-			{
-				*line = ft_strsub(*all, 0, i);
-				*all = ft_strsub(*all, i + 1, ft_strlen(*all) - i);
-				return (1);
-			}
-			i++;
-		}
-		*line = *all;
-		*all = ft_strsub(*all, i + 1, ft_strlen(*all) - i);
+		*line = ft_strsub(*all, 0, tmp - *all);
+		*all = ft_strdup(tmp + 1);
+		return (1);
 	}
-	return (1);
+	if (ft_strcmp(buf, "") == 0)
+	{
+		*line = ft_strdup(*all);
+		ft_strdel(&(*all));
+		return (1);
+	}
+	return (0);
 }
 
 int		get_next_line(const int fd, char **line)
@@ -54,12 +43,15 @@ int		get_next_line(const int fd, char **line)
 		while ((nb = read(fd, &buf, BUFF_SIZE)) > 0)
 		{
 			buf[nb] = '\0';
-			buf_all(buf, &all);
+			((!all) ? (all = ft_strdup(buf)) : (all = ft_free_join(all, buf, 'L')));
+			if (check_buf(buf, &all, line) == 1)
+				return (1);
 			ft_bzero(buf, BUFF_SIZE);
 		}
-		while (ft_strcmp(all, "") != 0 && check_buf(line, &all) == 1)
-			return (1);
-		return (0);
+		while (all && ft_strcmp(all, "") != 0)
+			if (check_buf(buf, &all, line) == 1)
+				return (1);
+			return (0);
 	}
 	return (-1);
 }
