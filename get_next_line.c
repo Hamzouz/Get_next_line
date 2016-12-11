@@ -6,27 +6,56 @@
 /*   By: hmadad <marvin@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2016/11/29 09:59:31 by hmadad            #+#    #+#             */
-/*   Updated: 2016/12/06 14:07:35 by hmadad           ###   ########.fr       */
+/*   Updated: 2016/12/11 11:39:56 by hmadad           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
-#include <stdio.h>
 
-int		check_buf(char* buf, char **all, char **line)
+t_list	*find_list(t_list **lst, int fd)
+{
+	t_list	*list;
+
+	list = *lst;
+	if (!list)
+	{
+		list = ft_lstnew("\0", 1);
+		list->content_size = fd;
+		*lst = list;
+		return (list);
+	}
+	while (list && list->content_size != (size_t)fd)
+		list = list->next;
+	if (list)
+		return (list);
+	list = ft_lstnew("\0", 1);
+	list->content_size = fd;
+	ft_lstadd(lst, list);
+	return (*lst);
+}
+
+int		check_all(t_list **lst, char **line)
 {
 	char	*tmp;
+	char	*tmp2;
+	t_list	*list;
 
-	if ((tmp = ft_strchr(*all, '\n')))
+	list = *lst;
+	if ((list->content && ft_strcmp(list->content, "") != 0) &&
+			!(ft_strchr(list->content, '\n')))
 	{
-		*line = ft_strsub(*all, 0, tmp - *all);
-		*all = ft_strdup(tmp + 1);
+		*line = ft_strdup(list->content);
+		ft_memdel(&list->content);
 		return (1);
 	}
-	if (ft_strcmp(buf, "") == 0)
+	if ((list->content && ft_strcmp(list->content, "") != 0) &&
+			(tmp = ft_strchr(list->content, '\n')))
 	{
-		*line = ft_strdup(*all);
-		ft_strdel(&(*all));
+		*line = ft_strsub(list->content, 0, tmp - (char*)list->content);
+		tmp2 = ft_strdup(tmp + 1);
+		ft_memdel(&list->content);
+		list->content = ft_strdup(tmp2);
+		ft_strdel(&tmp2);
 		return (1);
 	}
 	return (0);
@@ -34,24 +63,21 @@ int		check_buf(char* buf, char **all, char **line)
 
 int		get_next_line(const int fd, char **line)
 {
-	char		buf[BUFF_SIZE + 1];
-	static char	*all = NULL;
-	int			nb;
+	char			buf[BUFF_SIZE + 1];
+	static t_list	*lst = NULL;
+	int				nb;
+	t_list			*list;
 
-	if (read(fd, &buf, 0) >= 0)
+	if (read(fd, buf, 0) < 0)
+		return (-1);
+	list = find_list(&lst, fd);
+	while (list->content && !ft_strchr(list->content, '\n') &&
+			(nb = read(fd, buf, BUFF_SIZE)) > 0)
 	{
-		while ((nb = read(fd, &buf, BUFF_SIZE)) > 0)
-		{
-			buf[nb] = '\0';
-			((!all) ? (all = ft_strdup(buf)) : (all = ft_free_join(all, buf, 'L')));
-			if (check_buf(buf, &all, line) == 1)
-				return (1);
-			ft_bzero(buf, BUFF_SIZE);
-		}
-		while (all && ft_strcmp(all, "") != 0)
-			if (check_buf(buf, &all, line) == 1)
-				return (1);
-			return (0);
+		buf[nb] = '\0';
+		list->content = ft_free_join(list->content, buf, 'L');
 	}
-	return (-1);
+	if (check_all(&list, line) == 1)
+		return (1);
+	return (0);
 }
